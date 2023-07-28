@@ -88,9 +88,10 @@ def main(args):
 
     tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
     tokenizer.pad_token = tokenizer.eos_token
-    dataset = RandomSequenceDataset(tokenizer=tokenizer, seq_length=args.seq_length, num_samples=32)
+    dataset = RandomSequenceDataset(tokenizer=tokenizer, seq_length=args.seq_length, num_samples=1000)
     # dataset = load_openwebtext(tokenizer=tokenizer, seq_length=args.seq_length)
 
+    # build model
     d_model = args.dmodel
     n_layer = args.nlayer
     ssm_cfg = dict(mode='diag', measure='diag-lin', use_fast_fftconv=args.use_fast_fftconv)
@@ -100,6 +101,8 @@ def main(args):
                        ssm_cfg=ssm_cfg, attn_layer_idx=attn_layer_idx, attn_cfg=attn_cfg, max_position_embeddings=args.seq_length,
                        pad_vocab_size_multiple=8).to(device=device)
     print(f'Number of parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}')
+    
+    # build huggingface trainer
     training_args = TrainingArguments(
         output_dir='./model_dump/',
         num_train_epochs=1,
@@ -112,6 +115,7 @@ def main(args):
         remove_unused_columns=False,
         weight_decay=0
     )
+    
     writer = SummaryWriter(os.path.join('./tb', datetime.now().strftime("%m-%d-%Y-%H:%M:%S")))
     writer.add_text("config", f"params: {sum(p.numel() for p in model.parameters() if p.requires_grad)}, args: {args}, training_args: {training_args}")
     trainer = H3Trainer(
@@ -122,6 +126,7 @@ def main(args):
         # data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False),
         train_dataset=dataset,
     )
+    
     start = time.perf_counter()
     if args.use_profiler:
         with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU,
