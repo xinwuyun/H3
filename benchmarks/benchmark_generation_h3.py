@@ -1,3 +1,4 @@
+#region import ...
 from typing import Optional
 import argparse
 import time
@@ -13,8 +14,9 @@ from src.models.ssm.h3 import H3
 from src.models.ssm_seq import SSMLMHeadModel
 
 from flash_attn.utils.generation import InferenceParams
+#endregion
 
-
+#region parser
 parser = argparse.ArgumentParser(description='H3 generation benchmarking')
 parser.add_argument('--dmodel', type=int, default=2048)
 parser.add_argument('--nlayer', type=int, default=24)
@@ -24,17 +26,19 @@ parser.add_argument('--ckpt', type=str, default=None)
 parser.add_argument('--promptlen', type=int, default=1024)
 parser.add_argument('--genlen', type=int, default=128)
 args = parser.parse_args()
+#endregion
 
 repeats = 3
 device = 'cuda'
 dtype = torch.float16
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 
+#region prepare model
 # set seed
 torch.random.manual_seed(0)
 d_model = args.dmodel
 n_layer = args.nlayer
-ssm_cfg = dict(mode='diag', measure='diag-lin')
+ssm_cfg = dict(mode='diag', measure='diag-lin', use_fast_fftconv=True)
 attn_layer_idx = args.attn_layer_idx
 attn_cfg = dict(num_heads=args.nheads)
 model = SSMLMHeadModel(d_model, n_layer=n_layer, d_inner=4 * d_model, vocab_size=len(tokenizer),
@@ -48,6 +52,7 @@ if args.ckpt is not None:
                       if k.startswith('model.')}
     model.load_state_dict(state_dict)
 model.eval()
+
 # Only cast the nn.Linear parameters to dtype, the SSM params stay in fp32
 # Pytorch lacks support for complex32 (i.e. complex<float16>) and complex<bfloat16>.
 for name, module in model.named_modules():
@@ -56,7 +61,9 @@ for name, module in model.named_modules():
 
 input_ids = torch.randint(0, 100, (64, args.promptlen), dtype=torch.long, device='cuda')
 max_length = input_ids.shape[1] + args.genlen
+#endregion
 
+#region evaluate
 fn = lambda: model.generate(input_ids=input_ids, max_length=max_length,
                        return_dict_in_generate=True, output_scores=True, timing=False)
 
@@ -69,7 +76,7 @@ torch.cuda.synchronize()
 print(f'Prompt processing + decoding time: {(time.time() - start) / repeats * 1000:.0f}ms')
 
 
-config = GPT2Config(vocab_size=len(tokenizer), n_positions=2048, n_embd=d_model, n_layer=n_layer,
+config = GPT2Config(vocab_size=len(tokenizer), n_positions=4096, n_embd=d_model, n_layer=n_layer,
                     activation_function='gelu', num_attention_heads=args.nheads)
 model_hf = GPT2LMHeadModel(config).to(dtype=dtype, device=device)
 print(f'Transformer number of parameters: {sum(p.numel() for p in model_hf.parameters() if p.requires_grad)}')
@@ -84,3 +91,4 @@ for _ in range(repeats):
     fn()
 torch.cuda.synchronize()
 print(f'Transformer prompt processing + decoding time: {(time.time() - start) / repeats * 1000:.0f}ms')
+#endregion

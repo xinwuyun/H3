@@ -31,6 +31,11 @@ git clone https://huggingface.co/danfu09/H3-125M
 git clone https://github.com/HazyResearch/H3.git
 
 PYTHONPATH=$(pwd)/H3 python H3/examples/generate_text_h3.py --ckpt H3-125M/model.pt --prompt "Hungry Hungry Hippos: Towards Language Modeling With State Space Models is a new language model that" --dmodel 768 --nlayer 12 --attn-layer-idx 6 --nheads=12
+
+PAI wangzerui-base命令
+PYTHONPATH=$(pwd) python examples/generate_text_h3.py --ckpt H3-125M/model.pt --prompt "Hungry Hungry Hippos: Towards Language Modeling With State Space Models is a new language model that" --dmodel 768 --nlayer 12 --attn-layer-idx 6 --nheads=12
+
+PYTHONPATH=$(pwd) python benchmarks/benchmark_generation_h3.py --dmodel 768 --nlayer 12 --attn-layer-idx 6 --promptlen=2048
 ```
 
 You should get an output like this (may change due to sampling in the text generation):

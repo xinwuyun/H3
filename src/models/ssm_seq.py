@@ -10,6 +10,7 @@ from collections.abc import Sequence
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn import CrossEntropyLoss
 
 from transformers.models.gpt2.configuration_gpt2 import GPT2Config
 
@@ -157,7 +158,7 @@ class SSMModel(nn.Module):
 class SSMLMHeadModel(nn.Module, GenerationMixin):
 
     def __init__(self, d_model: int, n_layer: int, d_inner: int, vocab_size: int, ssm_cfg=None,
-                 attn_layer_idx=None, attn_cfg=None, max_position_embeddings=0,
+                 attn_layer_idx=None, attn_cfg=None, max_position_embeddings=2048,
                  resid_dropout: float = 0.0, embed_dropout: float = 0.1, dropout_cls=nn.Dropout,
                  layer_norm_epsilon: float = 1e-5, initializer_cfg=None,
                  fused_mlp=False, fused_dropout_add_ln=False, residual_in_fp32=False,
@@ -183,10 +184,13 @@ class SSMLMHeadModel(nn.Module, GenerationMixin):
     def tie_weights(self):
         self.lm_head.weight = self.backbone.embeddings.word_embeddings.weight
 
-    def forward(self, input_ids, position_ids=None, inference_params=None):
+    def forward(self, input_ids, position_ids=None, inference_params=None, last_token_only=False, attention_mask=None, labels=None):
         hidden_states = self.backbone(input_ids, position_ids=position_ids,
                                       inference_params=inference_params)
-        lm_logits = self.lm_head(hidden_states)
+        if last_token_only:
+            lm_logits = self.lm_head(hidden_states)[:, -1, :]
+        else:
+            lm_logits = self.lm_head(hidden_states)
         CausalLMOutput = namedtuple('CausalLMOutput', ['logits'])
         return CausalLMOutput(logits=lm_logits)
 

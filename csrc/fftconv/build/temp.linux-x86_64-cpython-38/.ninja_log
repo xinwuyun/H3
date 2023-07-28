@@ -1,0 +1,3 @@
+# ninja log v5
+0	20292	1689733056339410838	/cpfs01/user/wangzerui/H3/csrc/fftconv/build/temp.linux-x86_64-cpython-38/fftconv.o	e2e25a554a2fe231
+1	127696	1689733163692908285	/cpfs01/user/wangzerui/H3/csrc/fftconv/build/temp.linux-x86_64-cpython-38/fftconv_cuda.o	febcba87ed215704

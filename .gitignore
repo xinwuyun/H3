@@ -1,0 +1,8 @@
+.conda
+.vscode
+hf-training-trainer
+model_dump
+openwebtext
+core**
+test_openwebtext.py
+test.ipynb

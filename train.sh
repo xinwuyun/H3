@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=0 python train.py --dmodel 768 --nlayer 24 --attn-layer-idx 6,8 --nheads=12 --seq_length=2048 --use_fast_fftconv
